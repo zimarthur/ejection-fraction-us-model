@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 class EarlyStopping:
-    def __init__(self, patience=7, verbose=False, delta=0, path='best_model.pth'):
+    def __init__(self, patience=7, verbose=True, delta=0, path='best_model.pth'):
         self.patience = patience
         self.verbose = verbose
         self.counter = 0
