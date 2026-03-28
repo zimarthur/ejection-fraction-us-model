@@ -1,7 +1,7 @@
 import os
 import torch
-import nibabel as nib
 import numpy as np
+import nibabel as nib
 import cv2
 from torch.utils.data import Dataset, DataLoader
 
@@ -9,7 +9,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATASET_PATH = os.path.abspath(os.path.join(BASE_DIR, '..', 'dataset'))
 
 class CamusSequenceDataset(Dataset):
-    def __init__(self, data_dir, target_shape=(256, 256)):
+    def __init__(self, data_dir, target_shape=(256, 256), allowed_patients=None):
         self.data_dir = data_dir
         self.target_shape = target_shape
         self.samples = []
@@ -20,6 +20,13 @@ class CamusSequenceDataset(Dataset):
         all_files = sorted([f for f in os.listdir(data_dir) if "half_sequence.nii" in f and "_gt" not in f])
 
         for f in all_files:
+            # Extrai o ID do paciente (ex: pega 'patient0001' de 'patient0001_2CH_half_sequence.nii')
+            patient_id = f.split('_')[0]
+
+            # NOVA LÓGICA: Se a lista foi fornecida e o paciente não está nela, ignoramos este arquivo
+            if allowed_patients is not None and patient_id not in allowed_patients:
+                continue
+
             img_path = os.path.join(data_dir, f)
             mask_path = os.path.join(data_dir, f.replace(".nii", "_gt.nii"))
             visao = "2CH" if "2CH" in f else "4CH"
@@ -36,7 +43,7 @@ class CamusSequenceDataset(Dataset):
                     })
         
         print(f"Dataset inicializado com {len(self.samples)} frames totais.")
-
+    
     def __len__(self):
         return len(self.samples)
 
