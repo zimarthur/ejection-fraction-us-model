@@ -55,20 +55,16 @@ class CamusSequenceDataset(Dataset):
         mask_res = cv2.resize(mask_frame, self.target_shape, interpolation=cv2.INTER_NEAREST)
 
         # Lógica de 2 canais (LV_2CH e LV_4CH) para o Biplano de Simpson
-        target = np.zeros((2, self.target_shape[0], self.target_shape[1]), dtype=np.float32)
-        lv_mask = (mask_res == 1).astype(np.float32) # Classe 1 é o LV
-
-        if sample["visao"] == "2CH":
-            target[0, :, :] = lv_mask
-        else:
-            target[1, :, :] = lv_mask
+        target = (mask_res == 1).astype(np.float32)
 
         # Normalização 0-1
         img_res = (img_res - np.min(img_res)) / (np.max(img_res) - np.min(img_res) + 1e-8)
 
         # Retorno dos Tensores (C, H, W)
-        img_tensor = torch.from_numpy(img_res).float().unsqueeze(0)
-        target_tensor = torch.from_numpy(target).float()
+        img_tensor = torch.from_numpy(img_res).float().unsqueeze(0) # (1, 256, 256)
+        
+        # Adicionamos o unsqueeze(0) aqui também para o target ter shape (1, 256, 256)
+        target_tensor = torch.from_numpy(target).float().unsqueeze(0) 
 
         return img_tensor, target_tensor
 
