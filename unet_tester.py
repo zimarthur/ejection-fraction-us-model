@@ -18,7 +18,7 @@ THRESHOLD = 0.5
 # =========================
 # CARREGA O MODELO
 # =========================
-model = UNet(in_channels=1, num_classes=1).to(DEVICE)
+model = UNet(in_channels=1, num_classes=1, base_filters=32).to(DEVICE)
 
 state_dict = torch.load(MODEL_PATH, map_location=DEVICE)
 model.load_state_dict(state_dict)
