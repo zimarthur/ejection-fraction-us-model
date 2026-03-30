@@ -52,6 +52,6 @@ def prepare_fast_dataset(orig_dir, fast_dir, target_shape=(256, 256)):
 
 
 # Execute isso logo após copiar os dados do Drive
-DATASET_ORIGINAL = "C:/Users/Usuario/Documents/Mestrado/dataset/treino_validacao"
-DATASET_FAST = "C:/Users/Usuario/Documents/Mestrado/dataset/treino_validacao_fast"
+DATASET_ORIGINAL = "C:/Users/Usuario/Documents/Mestrado/dataset/teste_nii"
+DATASET_FAST = "C:/Users/Usuario/Documents/Mestrado/dataset/teste"
 prepare_fast_dataset(DATASET_ORIGINAL, DATASET_FAST)

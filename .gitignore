@@ -1,1 +1,3 @@
 /feve_venv
+/__pycache__
+unet.pth
