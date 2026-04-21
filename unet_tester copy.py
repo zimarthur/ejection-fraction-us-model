@@ -3,7 +3,6 @@ import time
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-import onnxruntime as ort # IMPORTANTE: Adicionar onnxruntime
 from medpy.metric.binary import dc, hd95
 
 from unet import UNet
@@ -14,33 +13,31 @@ from unet import UNet
 
 MODEL_CONFIGS = [
     {
-        "name": "UNet 64 (PyTorch)",
+        "name": "UNet 64",
         "path": "models/unet_30_03.pth",
         "base_filters": 64,
-        "is_onnx": False # Nova flag
     },
     {
-        "name": "UNet 32 (ONNX)",
-        "path": "models/unet.onnx", 
-        "is_onnx": True # Nova flag
-    },
-    {
-        "name": "UNet 32 (PyTorch)",
+        "name": "UNet 32",
         "path": "models/unet_29_03.pth",
         "base_filters": 32,
-        "is_onnx": False
     },
-    # Adicione quantos modelos ONNX ou PTH quiser...
+    {
+        "name": "UNet 16",
+        "path": "models/unet_31_03.pth",
+        "base_filters": 16,
+    },
+    {
+        "name": "UNet 8",
+        "path": "models/unet_01_04.pth",
+        "base_filters": 8,
+    },
 ]
 
 TEST_FOLDER = r"C:/Users/Usuario/Documents/Mestrado/dataset/teste/"
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 THRESHOLD = 0.5
-
-# Função auxiliar para o ONNX
-def sigmoid_np(x):
-    return 1 / (1 + np.exp(-x))
 
 # =========================
 # CARREGA TODOS OS MODELOS
@@ -49,36 +46,20 @@ def sigmoid_np(x):
 models = []
 
 for config in MODEL_CONFIGS:
-    is_onnx = config.get("is_onnx", False)
-    
-    if is_onnx:
-        # Carregamento ONNX
-        session = ort.InferenceSession(config["path"])
-        input_name = session.get_inputs()[0].name
-        
-        models.append({
-            "name": config["name"],
-            "model": session,
-            "is_onnx": True,
-            "input_name": input_name # Guardamos o nome do input dinamicamente
-        })
-    else:
-        # Carregamento PyTorch Clássico
-        model = UNet(
-            in_channels=1,
-            num_classes=1,
-            base_filters=config["base_filters"]
-        ).to(DEVICE)
+    model = UNet(
+        in_channels=1,
+        num_classes=1,
+        base_filters=config["base_filters"]
+    ).to(DEVICE)
 
-        state_dict = torch.load(config["path"], map_location=DEVICE)
-        model.load_state_dict(state_dict)
-        model.eval()
+    state_dict = torch.load(config["path"], map_location=DEVICE)
+    model.load_state_dict(state_dict)
+    model.eval()
 
-        models.append({
-            "name": config["name"],
-            "model": model,
-            "is_onnx": False
-        })
+    models.append({
+        "name": config["name"],
+        "model": model
+    })
 
 print(f"{len(models)} modelos carregados")
 
@@ -110,10 +91,7 @@ for file_name in all_files:
 
     gt_bool = gt_mask_np.astype(bool)
 
-    # Tensor para o PyTorch
     input_tensor = img.unsqueeze(0).to(DEVICE)  # [1,1,H,W]
-    # Array para o ONNX
-    input_array = input_tensor.cpu().numpy()
 
     predictions = []
 
@@ -124,37 +102,21 @@ for file_name in all_files:
     for model_info in models:
         model = model_info["model"]
         model_name = model_info["name"]
-        is_onnx = model_info["is_onnx"]
 
         start_time = time.perf_counter()
 
-        if is_onnx:
-            # Inferência ONNX
-            input_name = model_info["input_name"]
-            
-            # O output do ONNX é uma lista, pegamos o índice 0
-            output = model.run(None, {input_name: input_array})[0]
-            
-            # Aplica a ativação Sigmoid no NumPy
-            output = sigmoid_np(output)
-            
-            pred_mask = np.squeeze(output)
-            
-        else:
-            # Inferência PyTorch
-            with torch.no_grad():
-                output = model(input_tensor)
-                output = torch.sigmoid(output)
+        with torch.no_grad():
+            output = model(input_tensor)
+            output = torch.sigmoid(output)
 
-                if DEVICE == "cuda":
-                    torch.cuda.synchronize()
-            
-            pred_mask = output.squeeze().cpu().numpy()
+            if DEVICE == "cuda":
+                torch.cuda.synchronize()
 
-        # Tempo calculado de forma uniforme para ambos
         inference_time = (time.perf_counter() - start_time) * 1000
 
+        pred_mask = output.squeeze().cpu().numpy()
         pred_mask_binary = (pred_mask > THRESHOLD).astype(np.uint8)
+
         pred_bool = pred_mask_binary.astype(bool)
 
         # =========================
